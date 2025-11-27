@@ -70,6 +70,28 @@ impl Message {
         }
     }
 
+    /// Try reading underlying struct buffer as bytes.
+    pub fn to_bytes(&self) -> Result<Vec<u8>, QuickFixError> {
+        unsafe {
+            // Prepare output buffer
+            let buffer_len = FixMessage_getStringLen(self.0)
+                .try_into()
+                .map_err(|_err| QuickFixError::from_last_error())?;
+
+            // Allocate buffer on rust side
+            let mut buffer = vec![0_u8; buffer_len as usize];
+            assert_eq!(buffer.len(), buffer_len as usize);
+
+            // Read text
+            ffi_code_to_result(FixMessage_readString(
+                self.0,
+                buffer.as_mut_ptr().cast(),
+                buffer_len,
+            ))?;
+            Ok(buffer)
+        }
+    }
+
     /// Clone struct header part.
     ///
     /// # Panic
